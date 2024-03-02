@@ -1,4 +1,5 @@
 # WebExt Redux
+
 A set of utilities for building Redux applications in web extensions. This package was originally named `react-chrome-redux`.
 
 [![NPM Version][npm-image]][npm-url]
@@ -29,19 +30,19 @@ All UI Components follow the same basic flow:
 
 As described in the [introduction](https://github.com/tshaddix/webext-redux/wiki/Introduction#webext-redux), there are two pieces to a basic implementation of this package.
 
-### 1. Add the *Proxy Store* to a UI Component, such as a popup
+### 1. Add the _Proxy Store_ to a UI Component, such as a popup
 
 ```js
 // popover.js
 
-import React from 'react';
-import {render} from 'react-dom';
-import {Provider} from 'react-redux';
-import {Store} from 'webext-redux';
+import React from "react"
+import { render } from "react-dom"
+import { Provider } from "react-redux"
+import { Store } from "webext-redux"
 
-import App from './components/app/App';
+import App from "./components/app/App"
 
-const store = new Store();
+const store = new Store()
 
 // wait for the store to connect to the background page
 store.ready().then(() => {
@@ -49,10 +50,11 @@ store.ready().then(() => {
   // so you can use tools like `react-redux` no problem!
   render(
     <Provider store={store}>
-      <App/>
-    </Provider>
-    , document.getElementById('app'));
-});
+      <App />
+    </Provider>,
+    document.getElementById("app")
+  )
+})
 ```
 
 ### 2. Wrap your Redux store in the background page with `wrapStore()`
@@ -69,40 +71,33 @@ wrapStore(store);
 
 That's it! The dispatches called from UI component will find their way to the background page no problem. The new state from your background page will make sure to find its way back to the UI components.
 
+### 3. Optional: Apply any redux middleware to your _Proxy Store_ with `applyMiddleware()`
 
-
-
-### 3. Optional: Apply any redux middleware to your *Proxy Store* with `applyMiddleware()`
-
-
-Just like a regular Redux store, you can apply Redux middlewares to the Proxy store by using the library provided applyMiddleware function.  This can be useful for doing things such as dispatching thunks to handle async control flow.
+Just like a regular Redux store, you can apply Redux middlewares to the Proxy store by using the library provided applyMiddleware function. This can be useful for doing things such as dispatching thunks to handle async control flow.
 
 ```js
 // content.js
-import {Store, applyMiddleware} from 'webext-redux';
-import thunkMiddleware from 'redux-thunk';
+import { Store, applyMiddleware } from "webext-redux"
+import thunkMiddleware from "redux-thunk"
 
 // Proxy store
-const store = new Store();
+const store = new Store()
 
 // Apply middleware to proxy store
-const middleware = [thunkMiddleware];
-const storeWithMiddleware = applyMiddleware(store, ...middleware);
+const middleware = [thunkMiddleware]
+const storeWithMiddleware = applyMiddleware(store, ...middleware)
 
 // You can now dispatch a function from the proxy store
 storeWithMiddleware.dispatch((dispatch, getState) => {
   // Regular dispatches will still be routed to the background
-  dispatch({ type: 'start-async-action' });
+  dispatch({ type: "start-async-action" })
   setTimeout(() => {
-    dispatch({ type: 'complete-async-action' });
-  }, 0);
-});
+    dispatch({ type: "complete-async-action" })
+  }, 0)
+})
 ```
 
-
-
 ### 4. Optional: Implement actions whose logic only happens in the background script (we call them aliases)
-
 
 Sometimes you'll want to make sure the logic of your action creators happen in the background script. In this case, you will want to create an alias so that the alias is proxied from the UI component and the action creator logic executes in the background script.
 
@@ -157,13 +152,13 @@ There are probably going to be times where you are going to want to know who sen
 ```js
 // actions.js
 
-export const MY_ACTION = 'MY_ACTION';
+export const MY_ACTION = "MY_ACTION"
 
 export function myAction(data) {
-    return {
-        type: MY_ACTION,
-        data: data,
-    };
+  return {
+    type: MY_ACTION,
+    data: data,
+  }
 }
 ```
 
@@ -193,46 +188,47 @@ No changes are required to your actions, webext-redux automatically adds this in
 Contrary to regular Redux, **all** dispatches are asynchronous and return a `Promise`.
 It is inevitable since proxy stores and the main store communicate via browser messaging, which is inherently asynchronous.
 
-In pure Redux, dispatches are synchronous 
+In pure Redux, dispatches are synchronous
 (which may not be true with some middlewares such as `redux-thunk`).
 
 Consider this piece of code:
+
 ```js
-store.dispatch({ type: MODIFY_FOO_BAR, value: 'new value'});
-console.log(store.getState().fooBar);
+store.dispatch({ type: MODIFY_FOO_BAR, value: "new value" })
+console.log(store.getState().fooBar)
 ```
 
 You can rely that `console.log` in the code above will display the modified value.
 
-In `webext-redux` on the Proxy Store side you will need to 
+In `webext-redux` on the Proxy Store side you will need to
 explicitly wait for the dispatch to complete:
 
 ```js
-store.dispatch({ type: MODIFY_FOO_BAR, value: 'new value'}).then(() => 
-    console.log(store.getState().fooBar)
-);
+store.dispatch({ type: MODIFY_FOO_BAR, value: "new value" }).then(() => console.log(store.getState().fooBar))
 ```
+
 or, using async/await syntax:
 
 ```js
-await store.dispatch({ type: MODIFY_FOO_BAR, value: 'new value'});
-console.log(store.getState().fooBar);
+await store.dispatch({ type: MODIFY_FOO_BAR, value: "new value" })
+console.log(store.getState().fooBar)
 ```
 
 ### 2. dispatch / React component updates
 
 This case is relatively rare.
 
-On the Proxy Store side, React component updates with `webext-redux` 
+On the Proxy Store side, React component updates with `webext-redux`
 are more likely to take place after a dispatch is started and before it completes.
 
-While the code below might work (luckily?) in classical Redux, 
+While the code below might work (luckily?) in classical Redux,
 it does not anymore since the component has been updated before the `deletePost` is fully completed
 and `post` object is not accessible anymore in the promise handler:
+
 ```js
 class PostRemovePanel extends React.Component {
     (...)
-    
+
     handleRemoveButtonClicked() {
         this.props.deletePost(this.props.post)
           .then(() => {
@@ -241,6 +237,7 @@ class PostRemovePanel extends React.Component {
     }
 }
 ```
+
 On the other hand, this piece of code is safe:
 
 ```js
@@ -267,28 +264,33 @@ If you spot any more surprises that are worth watching out for, make sure to let
 You may wish to implement custom serialization and deserialization logic for communication between the background store and your proxy store(s). Web Extension's message passing (which is used to implement this library) automatically serializes messages when they are sent and deserializes them when they are received. In the case that you have non-JSON-ifiable information in your Redux state, like a circular reference or a `Date` object, you will lose information between the background store and the proxy store(s). To manage this, both `wrapStore` and `Store` accept `serializer` and `deserializer` options. These should be functions that take a single parameter, the payload of a message, and return a serialized and deserialized form, respectively. The `serializer` function will be called every time a message is sent, and the `deserializer` function will be called every time a message is received. Note that, in addition to state updates, action creators being passed from your content script(s) to your background page will be serialized and deserialized as well.
 
 ### Example
+
 For example, consider the following `state` in your background page:
 
 ```js
-{todos: [
+{
+  todos: [
     {
       id: 1,
-      text: 'Write a Web extension',
-      created: new Date(2018, 0, 1)
-    }
-]}
+      text: "Write a Web extension",
+      created: new Date(2018, 0, 1),
+    },
+  ]
+}
 ```
 
 With no custom serialization, the `state` in your proxy store will look like this:
 
 ```js
-{todos: [
+{
+  todos: [
     {
       id: 1,
-      text: 'Write a Web extension',
-      created: {}
-    }
-]}
+      text: "Write a Web extension",
+      created: {},
+    },
+  ]
+}
 ```
 
 As you can see, Web Extension's message passing has caused your date to disappear. You can pass a custom `serializer` and `deserializer` to both `wrapStore` and `Store` to make sure your dates get preserved:
@@ -309,27 +311,27 @@ wrapStore(store, {
 ```js
 // content.js
 
-import {Store} from 'webext-redux';
+import { Store } from "webext-redux"
 
 const store = new Store({
-  serializer: payload => JSON.stringify(payload, dateReplacer),
-  deserializer: payload => JSON.parse(payload, dateReviver)
-});
+  serializer: (payload) => JSON.stringify(payload, dateReplacer),
+  deserializer: (payload) => JSON.parse(payload, dateReviver),
+})
 ```
 
 In this example, `dateReplacer` and `dateReviver` are a custom JSON [replacer](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify) and [reviver](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse) function, respectively. They are defined as such:
 
 ```js
-function dateReplacer (key, value) {
+function dateReplacer(key, value) {
   // Put a custom flag on dates instead of relying on JSON's native
   // stringification, which would force us to use a regex on the other end
-  return this[key] instanceof Date ? {"_RECOVER_DATE": this[key].getTime()} : value
-};
+  return this[key] instanceof Date ? { _RECOVER_DATE: this[key].getTime() } : value
+}
 
-function dateReviver (key, value) {
+function dateReviver(key, value) {
   // Look for the custom flag and revive the date
   return value && value["_RECOVER_DATE"] ? new Date(value["_RECOVER_DATE"]) : value
-};
+}
 
 const stringified = JSON.stringify(state, dateReplacer)
 //"{"todos":[{"id":1,"text":"Write a Web extension","created":{"_RECOVER_DATE":1514793600000}}]}"
@@ -341,7 +343,7 @@ JSON.parse(stringified, dateReviver)
 ## Custom Diffing and Patching Strategies
 
 On each state update, `webext-redux` generates a patch based on the difference between the old state and the new state. The patch is sent to each proxy store, where it is used to update the proxy store's state. This is more efficient than sending the entire state to each proxy store on every update.
-If you find that the default patching behavior is not sufficient, you can fine-tune `webext-redux` using custom diffing and patching strategies. 
+If you find that the default patching behavior is not sufficient, you can fine-tune `webext-redux` using custom diffing and patching strategies.
 
 ### Deep Diff Strategy
 
@@ -378,12 +380,12 @@ wrapStore(store, {
 ```js
 // content.js
 
-import {Store} from 'webext-redux';
-import patchDeepDiff from 'webext-redux/lib/strategies/deepDiff/patch';
+import { Store } from "webext-redux"
+import patchDeepDiff from "webext-redux/lib/strategies/deepDiff/patch"
 
 const store = new Store({
-  patchStrategy: patchDeepDiff
-});
+  patchStrategy: patchDeepDiff,
+})
 ```
 
 Note that the deep diffing strategy currently diffs arrays shallowly, and patches item changes based on typed equality.
@@ -430,13 +432,13 @@ Aside from being able to fine-tune `webext-redux`'s performance, custom diffing 
 
 ## Docs
 
-* [Introduction](https://github.com/tshaddix/webext-redux/wiki/Introduction)
-* [Getting Started](https://github.com/tshaddix/webext-redux/wiki/Getting-Started)
-* [Advanced Usage](https://github.com/tshaddix/webext-redux/wiki/Advanced-Usage)
-* [API](https://github.com/tshaddix/webext-redux/wiki/API)
-  * [Store](https://github.com/tshaddix/webext-redux/wiki/Store)
-  * [wrapStore](https://github.com/tshaddix/webext-redux/wiki/wrapStore)
-  * [alias](https://github.com/tshaddix/webext-redux/wiki/alias)
+- [Introduction](https://github.com/tshaddix/webext-redux/wiki/Introduction)
+- [Getting Started](https://github.com/tshaddix/webext-redux/wiki/Getting-Started)
+- [Advanced Usage](https://github.com/tshaddix/webext-redux/wiki/Advanced-Usage)
+- [API](https://github.com/tshaddix/webext-redux/wiki/API)
+  - [Store](https://github.com/tshaddix/webext-redux/wiki/Store)
+  - [wrapStore](https://github.com/tshaddix/webext-redux/wiki/wrapStore)
+  - [alias](https://github.com/tshaddix/webext-redux/wiki/alias)
 
 ## Who's using this?
 
@@ -451,7 +453,6 @@ Aside from being able to fine-tune `webext-redux`'s performance, custom diffing 
 [![Storyful][storyful-image]][storyful-url]
 
 Using `webext-redux` in your project? We'd love to hear about it! Just [open an issue](https://github.com/tshaddix/webext-redux/issues) and let us know.
-
 
 [npm-image]: https://img.shields.io/npm/v/webext-redux.svg
 [npm-url]: https://npmjs.org/package/webext-redux
