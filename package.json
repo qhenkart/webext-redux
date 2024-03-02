@@ -49,6 +49,6 @@
     "sinon": "^6.0.0"
   },
   "peerDependencies": {
-    "redux": ">= 3 <= 4"
+    "redux": ">= 3 <= 5"
   }
 }
